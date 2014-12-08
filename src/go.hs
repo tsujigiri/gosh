@@ -2,26 +2,31 @@ module Go (new_game, add_move) where
 
 import qualified Data.Map.Strict as Map
 
-data X = A | B | C | D | E | F | G | H | J | K | L | M | N | O | P | Q | R | S | T deriving (Show, Ord, Eq)
-type Y = Int
-type Coordinate = (X, Y)
+data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White deriving Show
 data Game = Game {
-  board :: Map.Map Coordinate Stone,
-  moves :: [Coordinate]
+  board :: Map.Map Point Stone,
+  moves :: [Point],
+  size :: Int
 } deriving Show
 
 new_game :: Game
 new_game = Game {
   board = Map.empty,
-  moves = []
+  moves = [],
+  size = 19
 }
 
-add_move :: Game -> Coordinate -> Game
-add_move (Game { moves = moves, board = board }) move =
-  Game { moves = move:moves, board = (Map.insert move (next_stone moves) board) }
+add_move :: Game -> Point -> Game
+add_move (Game { moves = moves, board = board, size = size }) (Point (x, y))
+  | x <= size && y <= size =
+    Game {
+      moves = (Point (x, y)):moves,
+      board = (Map.insert (Point (x, y)) (next_stone moves) board),
+      size = size
+    }
 
-next_stone :: [Coordinate] -> Stone
+next_stone :: [Point] -> Stone
 next_stone moves
   | even (length moves) = Black
   | otherwise = White
