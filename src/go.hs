@@ -28,10 +28,10 @@ new_game = Game {
 }
 
 add_move :: Game -> Point -> Game
-add_move (Game { moves = moves, board = board, size = size }) (Point (x, y))
+add_move (Game { moves = moves, board = board, size = size }) point@(Point (x, y))
   | x <= size && y <= size =
     Game {
-      moves = (Point (x, y)):moves,
+      moves = point:moves,
       board = (Map.insert (Point (x, y)) (next_stone moves) board),
       size = size
     }
