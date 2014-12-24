@@ -29,12 +29,13 @@ newGame = Game {
 
 addMove :: Game -> Point -> Game
 addMove (Game { moves = moves, board = board, size = size }) point@(Point (x, y))
-  | x <= size && y <= size =
+  | validMove =
     Game {
       moves = point:moves,
       board = (Map.insert (Point (x, y)) (nextStone moves) board),
       size = size
     }
+  where validMove = x <= size && x >= 1 && y <= size && y >= 1 && Map.lookup point board == Nothing
 
 nextStone :: [Point] -> Stone
 nextStone moves
