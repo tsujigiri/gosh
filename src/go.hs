@@ -28,28 +28,32 @@ newGame = Game {
 }
 
 addMove :: Game -> Point -> Game
-addMove (Game { moves = moves, board = board, size = size }) point@(Point (x, y))
+addMove game@(Game { moves = moves, board = board, size = size }) point@(Point (x, y))
     | validMove =
         Game {
         moves = point:moves,
-        board = (Map.insert (Point (x, y)) (nextStone moves) board),
+        board = Map.insert point (nextStone moves) board,
         size = size
     }
     where validMove = x <= size && x >= 1 && y <= size && y >= 1
-                      && Map.lookup point board == Nothing
+                      && boardAt game point == Nothing
 
 nextStone :: [Point] -> Stone
 nextStone moves
     | even (length moves) = Black
     | otherwise = White
 
-drawBoard :: Game -> Point -> String
-drawBoard (Game { board = board, size = size }) point
-    | (Map.lookup point board) == Nothing = [boardAt size point]
-    | otherwise = show (definitely (Map.lookup point board))
+boardAt :: Game -> Point -> Maybe Stone
+boardAt (Game { board = board }) point = Map.lookup point board
 
-boardAt :: Int -> Point -> Char
-boardAt size (Point (x, y))
+drawBoard :: Game -> Point -> String
+drawBoard game@(Game { size = size }) point
+    | stone == Nothing = [gridAt size point]
+    | otherwise = show $ definitely stone
+    where stone = boardAt game point
+
+gridAt :: Int -> Point -> Char
+gridAt size (Point (x, y))
     | x == 1 && y == 1 = '┌'
     | x == 1 && y == size = '└'
     | x == size && y == 1 = '┐'
