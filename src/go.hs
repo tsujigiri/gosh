@@ -18,7 +18,17 @@ instance Show Stone where
 
 instance Show Game where
     show game@Game { size = size } =
-        intercalate "\n" [ concat [drawBoard game (Point (x, y)) | x <- [1..size] ] | y <- [1..size] ]
+        showXCoords
+        ++ "\n"
+        ++ concat [
+            concat (
+                    [showYCoord y]
+                    ++ [drawBoard game (Point (x, y)) | x <- [1..size] ]
+                    ++ [" "]
+                    ++ [showYCoord y]
+                    ++ ["\n"]
+            ) | y <- [1..size]
+        ] ++ showXCoords
 
 newGame :: Game
 newGame = Game {
@@ -77,3 +87,9 @@ coordLetters = Map.fromList [
         ('o', 14), ('p', 15), ('q', 16), ('r', 17), ('s', 18), ('t', 19)
     ]
 
+showYCoord :: Int -> String
+showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
+    where coord = show y
+
+showXCoords :: String
+showXCoords = "   " ++ Map.keys coordLetters
