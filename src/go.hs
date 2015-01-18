@@ -2,6 +2,7 @@ module Go (newGame, addMove, parseCoords) where
 
 import qualified Data.Map.Strict as Map
 import Data.List
+import Control.Applicative
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White | Ko deriving Eq
@@ -40,11 +41,11 @@ newGame = Game {
 addMove :: Game -> Point -> Game
 addMove game@(Game { moves = moves, board = board, size = size }) point@(Point (x, y))
     | validMove =
-        Game {
-        moves = point:moves,
-        board = Map.insert point (nextStone moves) board,
-        size = size
-    }
+        removeCaptured Game {
+            moves = point:moves,
+            board = Map.insert point (nextStone moves) board,
+            size = size
+        }
     where validMove = x <= size && x >= 1 && y <= size && y >= 1
                       && boardAt game point == Nothing
 
@@ -56,10 +57,11 @@ nextStone moves
 boardAt :: Game -> Point -> Maybe Stone
 boardAt (Game { board = board }) point = Map.lookup point board
 
+
 drawBoard :: Game -> Point -> String
 drawBoard game@(Game { size = size }) point
     | stone == Nothing = [gridAt size point]
-    | otherwise = show $ definitely stone
+    | otherwise = show $ unwrap stone
     where stone = boardAt game point
 
 gridAt :: Int -> Point -> Char
@@ -74,11 +76,11 @@ gridAt size (Point (x, y))
     | x == size = '┤'
     | otherwise = '┼'
 
-definitely :: Maybe a -> a
-definitely (Just a) = a
+unwrap :: Maybe a -> a
+unwrap (Just a) = a
 
 parseCoords :: String -> Point
-parseCoords (x:y) = Point ((definitely (Map.lookup x coordLetters)), read y)
+parseCoords (x:y) = Point ((unwrap (Map.lookup x coordLetters)), read y)
 
 coordLetters :: Map.Map Char Int
 coordLetters = Map.fromList [
@@ -93,3 +95,51 @@ showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
 
 showXCoords :: String
 showXCoords = "   " ++ Map.keys coordLetters
+
+
+collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
+collectGroup game@(Game { size = size }) point@(Point (x, y)) seen
+    | x < 1 || y < 1 || x > size || y > size = seen
+    | currentPoint == Just Ko || currentPoint == Nothing = Nothing:seen
+    | elem (pure point) seen = seen
+    | seen == [] || head(seen) == Nothing || currentPoint == boardAt game (unwrap . head $ seen) =
+        groupInGame up
+        . groupInGame down
+        . groupInGame left
+        . groupInGame right $ (pure point):seen
+    | otherwise = seen
+    where currentPoint = boardAt game point
+          up = Point (x, y - 1)
+          down = Point (x, y + 1)
+          left = Point (x - 1, y)
+          right = Point (x + 1, y)
+          groupInGame = collectGroup game
+
+deadGroup :: [Maybe Point] -> [Point]
+deadGroup groupPoints
+    | any (== Nothing) groupPoints = []
+    | otherwise = map unwrap groupPoints
+
+removeCaptured :: Game -> Game
+removeCaptured game@Game { board = board, moves = moves } =
+    game { board =
+       multiDelete (deadGroup upperGroup)
+       $ multiDelete (deadGroup lowerGroup)
+       $ multiDelete (deadGroup leftGroup)
+       $ multiDelete (deadGroup rightGroup) board
+    }
+
+    where up = Point (x, y - 1)
+          down = Point (x, y + 1)
+          left = Point (x - 1, y)
+          right = Point (x + 1, y)
+          upperGroup = collectGroup game up []
+          lowerGroup = collectGroup game down []
+          leftGroup = collectGroup game left []
+          rightGroup = collectGroup game right []
+          Point (x, y):_ = moves
+
+multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
+multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
+multiDelete [] map = map
+
