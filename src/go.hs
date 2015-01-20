@@ -60,21 +60,21 @@ boardAt (Game { board = board }) point = Map.lookup point board
 
 drawBoard :: Game -> Point -> String
 drawBoard game@(Game { size = size }) point
-    | stone == Nothing = [gridAt size point]
-    | otherwise = show $ unwrap stone
+    | stone == Nothing = gridAt size point
+    | otherwise = leftOrRight (show (unwrap stone)) (gridAt size point)
     where stone = boardAt game point
 
-gridAt :: Int -> Point -> Char
+gridAt :: Int -> Point -> String
 gridAt size (Point (x, y))
-    | x == 1 && y == 1 = '┌'
-    | x == 1 && y == size = '└'
-    | x == size && y == 1 = '┐'
-    | x == size && y == size = '┘'
-    | y == 1 = '┬'
-    | y == size = '┴'
-    | x == 1 = '├'
-    | x == size = '┤'
-    | otherwise = '┼'
+    | x == 1 && y == 1 = "┌─"
+    | x == 1 && y == size = "└─"
+    | x == size && y == 1 = "┐"
+    | x == size && y == size = "┘"
+    | y == 1 = "┬─"
+    | y == size = "┴─"
+    | x == 1 = "├─"
+    | x == size = "┤"
+    | otherwise = "┼─"
 
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
@@ -94,7 +94,7 @@ showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
     where coord = show y
 
 showXCoords :: String
-showXCoords = "   " ++ Map.keys coordLetters
+showXCoords = "   " ++ (intersperse ' ' $ Map.keys coordLetters)
 
 
 collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
@@ -142,4 +142,9 @@ removeCaptured game@Game { board = board, moves = moves } =
 multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
 multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
 multiDelete [] map = map
+
+leftOrRight :: [a] -> [a] -> [a]
+leftOrRight [] [] = []
+leftOrRight [] (right:rights) = right:(leftOrRight [] rights)
+leftOrRight (left:lefts) (right:rights) = left:(leftOrRight lefts rights)
 
