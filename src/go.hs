@@ -3,6 +3,7 @@ module Go (newGame, addMove, parseCoords) where
 import qualified Data.Map.Strict as Map
 import Data.List
 import Control.Applicative
+import Colors
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White | Ko deriving Eq
@@ -13,8 +14,8 @@ data Game = Game {
 }
 
 instance Show Stone where
-    show Black = "○"
-    show White = "●"
+    show Black = "●"
+    show White = fgWhite ++ "●" ++ fgBlack
     show Ko = "□"
 
 instance Show Game where
@@ -24,7 +25,9 @@ instance Show Game where
         ++ concat [
             concat (
                     [showYCoord y]
+                    ++ [boardColors]
                     ++ [drawBoard game (Point (x, y)) | x <- [1..size] ]
+                    ++ [reset]
                     ++ [" "]
                     ++ [showYCoord y]
                     ++ ["\n"]
@@ -37,6 +40,9 @@ newGame = Game {
     moves = [],
     size = 19
 }
+
+boardColors :: String
+boardColors = fgBlack ++ bgYellow
 
 addMove :: Game -> Point -> Game
 addMove game@(Game { moves = moves, board = board, size = size }) point@(Point (x, y))
@@ -61,7 +67,7 @@ boardAt (Game { board = board }) point = Map.lookup point board
 drawBoard :: Game -> Point -> String
 drawBoard game@(Game { size = size }) point
     | stone == Nothing = gridAt size point
-    | otherwise = leftOrRight (show (unwrap stone)) (gridAt size point)
+    | otherwise = (show (unwrap stone)) ++ (tail (gridAt size point))
     where stone = boardAt game point
 
 gridAt :: Int -> Point -> String
@@ -142,9 +148,4 @@ removeCaptured game@Game { board = board, moves = moves } =
 multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
 multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
 multiDelete [] map = map
-
-leftOrRight :: [a] -> [a] -> [a]
-leftOrRight [] [] = []
-leftOrRight [] (right:rights) = right:(leftOrRight [] rights)
-leftOrRight (left:lefts) (right:rights) = left:(leftOrRight lefts rights)
 
