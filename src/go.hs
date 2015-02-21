@@ -1,4 +1,4 @@
-module Go (newGame, addMove, parseCoords) where
+module Go (Game, Point, newGame, addMove, parseCoords) where
 
 import qualified Data.Map.Strict as Map
 import Data.List
@@ -44,16 +44,26 @@ newGame = Game {
 boardColors :: String
 boardColors = fgBlack ++ bgYellow
 
-addMove :: Game -> Point -> Game
-addMove game@(Game { moves = moves, board = board, size = size }) point@(Point (x, y))
-    | validMove =
-        removeCaptured Game {
-            moves = point:moves,
-            board = Map.insert point (nextStone moves) board,
-            size = size
-        }
-    where validMove = x <= size && x >= 1 && y <= size && y >= 1
-                      && boardAt game point == Nothing
+addMove :: Game -> Point -> Either String Game
+addMove game point = do
+    return game
+    >>= validateCoords point
+    >>= insertMove point
+    >>= removeCaptured
+
+validateCoords :: Point -> Game -> Either String Game
+validateCoords point@(Point (x, y)) game@(Game { size = size })
+    | coordsAreValid = Right game
+    | otherwise = Left "Invalid input."
+    where coordsAreValid = x <= size && x >= 1 && y <= size && y >= 1
+                        && boardAt game point == Nothing
+
+insertMove :: Point -> Game -> Either String Game
+insertMove point game@(Game { moves = moves, board = board }) =
+    Right $ game {
+        moves = point:moves,
+        board = Map.insert point (nextStone moves) board
+    }
 
 nextStone :: [Point] -> Stone
 nextStone moves
@@ -85,8 +95,11 @@ gridAt size (Point (x, y))
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
 
-parseCoords :: String -> Point
-parseCoords (x:y) = Point ((unwrap (Map.lookup x coordLetters)), read y)
+parseCoords :: String -> Maybe Point
+parseCoords (x:y) = do
+    parsedX <- Map.lookup x coordLetters
+    parsedY <- Just $ read y
+    return $ Point (parsedX, parsedY)
 
 coordLetters :: Map.Map Char Int
 coordLetters = Map.fromList [
@@ -126,9 +139,9 @@ deadGroup groupPoints
     | any (== Nothing) groupPoints = []
     | otherwise = map unwrap groupPoints
 
-removeCaptured :: Game -> Game
+removeCaptured :: Game -> Either String Game
 removeCaptured game@Game { board = board, moves = moves } =
-    game { board =
+    Right $ game { board =
        multiDelete (deadGroup upperGroup)
        $ multiDelete (deadGroup lowerGroup)
        $ multiDelete (deadGroup leftGroup)

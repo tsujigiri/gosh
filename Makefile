@@ -1,7 +1,5 @@
-all: build run
-
 build:
-	ghc -o bin/go src/*.hs
+	ghc -prof -auto-all -caf-all -o bin/go src/*.hs
 
-run:
-	./bin/go
+run: build
+	./bin/go +RTS -xc
