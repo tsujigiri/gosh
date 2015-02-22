@@ -1,6 +1,6 @@
 # Gosh!
 
-Go, implemented in Haskell.
+The game of Go, implemented in Haskell
 
 ## Usage
 
