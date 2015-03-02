@@ -1,4 +1,4 @@
-module Go (Game, Point, newGame, addMove, parseCoords) where
+module Go (Game, Stone, Point, newGame, addMove, parseCoords, boardAt) where
 
 import qualified Data.Map.Strict as Map
 import Data.List
