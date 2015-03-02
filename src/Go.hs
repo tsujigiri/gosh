@@ -1,4 +1,12 @@
-module Go (Game, Stone, Point, newGame, addMove, parseCoords, boardAt) where
+module Go (
+    Game,
+    Point(..),
+    newGame,
+    addMove,
+    parseCoords,
+    boardAt,
+    Stone(..)
+) where
 
 import qualified Data.Map.Strict as Map
 import Data.List
@@ -11,7 +19,7 @@ data Game = Game {
     board :: Map.Map Point Stone,
     moves :: [Point],
     size :: Int
-}
+} deriving Eq
 
 instance Show Stone where
     show Black = "●"
@@ -53,10 +61,11 @@ addMove game point = do
 
 validateCoords :: Point -> Game -> Either String Game
 validateCoords point@(Point (x, y)) game@(Game { size = size })
-    | coordsAreValid = Right game
-    | otherwise = Left "Invalid input."
-    where coordsAreValid = x <= size && x >= 1 && y <= size && y >= 1
-                        && boardAt game point == Nothing
+    | invalidCoords = Left "Invalid coordinates"
+    | taken = Left "Point taken"
+    | otherwise = Right game
+    where invalidCoords = x > size || x < 1 || y > size || y < 1
+          taken = boardAt game point /= Nothing
 
 insertMove :: Point -> Game -> Either String Game
 insertMove point game@(Game { moves = moves, board = board }) =
