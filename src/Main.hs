@@ -1,6 +1,7 @@
 import System.IO
-import Go
 import qualified Data.Map.Strict as Map
+import Go
+import Go.UI.Color
 
 gameLoop :: Game -> IO ()
 gameLoop game = do

@@ -1,4 +1,4 @@
-module Colors where
+module ColorCodes where
 
 fgBlack :: String
 fgBlack = esc "30"

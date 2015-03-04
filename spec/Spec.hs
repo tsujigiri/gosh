@@ -1,8 +1,8 @@
 import Test.Hspec
 import Control.Exception (evaluate)
 
-import Colors
 import Go
+import Go.UI.Color
 
 main :: IO ()
 main = hspec $ do

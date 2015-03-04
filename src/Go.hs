@@ -12,9 +12,7 @@ module Go (
 ) where
 
 import qualified Data.Map.Strict as Map
-import Data.List
 import Control.Applicative
-import Colors
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White | Ko deriving Eq
@@ -24,36 +22,12 @@ data Game = Game {
     size :: Int
 } deriving Eq
 
-instance Show Stone where
-    show Black = "●"
-    show White = fgWhite ++ "●" ++ fgBlack
-    show Ko = "□"
-
-instance Show Game where
-    show game@Game { size = size } =
-        showXCoords
-        ++ "\n"
-        ++ concat [
-            concat (
-                    [showYCoord y]
-                    ++ [boardColors]
-                    ++ [drawBoard game (Point (x, y)) | x <- [1..size] ]
-                    ++ [reset]
-                    ++ [" "]
-                    ++ [showYCoord y]
-                    ++ ["\n"]
-            ) | y <- [1..size]
-        ] ++ showXCoords
-
 newGame :: Game
 newGame = Game {
     board = Map.empty,
     moves = [],
     size = 19
 }
-
-boardColors :: String
-boardColors = fgBlack ++ bgYellow
 
 addMove :: Game -> Point -> Either String Game
 addMove game point = do
@@ -88,25 +62,6 @@ nextStone Game { moves = moves }
 boardAt :: Game -> Point -> Maybe Stone
 boardAt (Game { board = board }) point = Map.lookup point board
 
-
-drawBoard :: Game -> Point -> String
-drawBoard game@(Game { size = size }) point
-    | stone == Nothing = gridAt size point
-    | otherwise = (show (unwrap stone)) ++ (tail (gridAt size point))
-    where stone = boardAt game point
-
-gridAt :: Int -> Point -> String
-gridAt size (Point (x, y))
-    | x == 1 && y == 1 = "┌─"
-    | x == 1 && y == size = "└─"
-    | x == size && y == 1 = "┐"
-    | x == size && y == size = "┘"
-    | y == 1 = "┬─"
-    | y == size = "┴─"
-    | x == 1 = "├─"
-    | x == size = "┤"
-    | otherwise = "┼─"
-
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
 
@@ -116,14 +71,6 @@ coordLetters = Map.fromList [
         ('h', 8), ('j', 9), ('k', 10), ('l', 11), ('m', 12), ('n', 13),
         ('o', 14), ('p', 15), ('q', 16), ('r', 17), ('s', 18), ('t', 19)
     ]
-
-showYCoord :: Int -> String
-showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
-    where coord = show y
-
-showXCoords :: String
-showXCoords = "   " ++ (intersperse ' ' $ Map.keys coordLetters)
-
 
 collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
 collectGroup game@(Game { size = size }) point@(Point (x, y)) seen
