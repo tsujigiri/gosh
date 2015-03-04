@@ -1,8 +1,10 @@
+import System.IO
 import Go
 import qualified Data.Map.Strict as Map
 
 gameLoop :: Game -> IO ()
 gameLoop game = do
+    printPrompt game
     input <- getLine
     case processInput input game of
         Right updatedGame -> do
@@ -22,6 +24,15 @@ processInput (x:y) game = do
                    [(parsedY, "")] -> Right parsedY
                    _ -> Left "Invalid input"
     addMove game $ Point (parsedX, parsedY)
+
+printPrompt :: Game -> IO ()
+printPrompt game = do
+    whoseMove <- return $ nextStone game
+    whoseMoveLiterally <- return $ case whoseMove of
+                                       Black -> "Black"
+                                       White -> "White"
+    putStr $ whoseMoveLiterally ++ " to move: "
+    hFlush stdout
 
 main = do
     game <- return $ newGame

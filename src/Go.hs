@@ -3,6 +3,7 @@ module Go (
     addMove,
     pass,
     coordLetters,
+    nextStone,
 
     Game(..),
     Point(..),
@@ -76,11 +77,11 @@ insertMove :: Point -> Game -> Either String Game
 insertMove point game@(Game { moves = moves, board = board }) =
     Right $ game {
         moves = (Just point):moves,
-        board = Map.insert point (nextStone moves) board
+        board = Map.insert point (nextStone game) board
     }
 
-nextStone :: [Maybe Point] -> Stone
-nextStone moves
+nextStone :: Game -> Stone
+nextStone Game { moves = moves }
     | even (length moves) = Black
     | otherwise = White
 
