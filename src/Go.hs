@@ -2,7 +2,7 @@ module Go (
     newGame,
     addMove,
     pass,
-    parseCoords,
+    coordLetters,
 
     Game(..),
     Point(..),
@@ -108,12 +108,6 @@ gridAt size (Point (x, y))
 
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
-
-parseCoords :: String -> Maybe Point
-parseCoords (x:y) = do
-    parsedX <- Map.lookup x coordLetters
-    parsedY <- Just $ read y
-    return $ Point (parsedX, parsedY)
 
 coordLetters :: Map.Map Char Int
 coordLetters = Map.fromList [
