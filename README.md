@@ -1,4 +1,4 @@
-# Gosh!
+# Gosh! [![Build Status](https://travis-ci.org/tsujigiri/gosh.svg?branch=master)](https://travis-ci.org/tsujigiri/gosh)
 
 The game of Go for the command line, implemented in Haskell.
 
@@ -6,8 +6,14 @@ The game of Go for the command line, implemented in Haskell.
 
 This is work in progress. So far you can add moves by typing the coordinates you want to set your stones at and it removes dead groups.
 
+
 ## Usage
 
+In order to run it, you need to have cabal installed. Install all the
+dependencies and run the program with:
+
 ```bash
-make run
+cabal update
+cabal install --only-dependencies
+cabal run
 ```
