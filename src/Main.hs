@@ -4,10 +4,11 @@ import qualified Data.Map.Strict as Map
 
 gameLoop :: Game -> IO ()
 gameLoop game = do
-    print game
     input <- getLine
     case processInput input game of
-        Right updatedGame -> gameLoop updatedGame
+        Right updatedGame -> do
+            print updatedGame
+            gameLoop updatedGame
         Left error -> do
             putStrLn error
             gameLoop game
@@ -21,4 +22,7 @@ processInput (x:y) game = do
     parsedY <- Right (read y::Int)
     addMove game $ Point (parsedX, parsedY)
 
-main = gameLoop newGame
+main = do
+    game <- return $ newGame
+    print game
+    gameLoop game
