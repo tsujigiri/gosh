@@ -1,5 +1,4 @@
 import Go
-import Control.Monad.Trans.Maybe
 import qualified Data.Map.Strict as Map
 
 gameLoop :: Game -> IO ()
