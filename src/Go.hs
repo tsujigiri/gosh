@@ -1,11 +1,13 @@
 module Go (
-    Game,
-    Point(..),
     newGame,
     addMove,
+    pass,
     parseCoords,
-    boardAt,
-    Stone(..)
+
+    Game(..),
+    Point(..),
+    Stone(..),
+    boardAt
 ) where
 
 import qualified Data.Map.Strict as Map
@@ -17,7 +19,7 @@ data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White | Ko deriving Eq
 data Game = Game {
     board :: Map.Map Point Stone,
-    moves :: [Point],
+    moves :: [Maybe Point],
     size :: Int
 } deriving Eq
 
@@ -59,6 +61,9 @@ addMove game point = do
     >>= insertMove point
     >>= removeCaptured
 
+pass :: Game -> Either String Game
+pass game@Game { moves = moves } = Right game { moves = Nothing:moves }
+
 validateCoords :: Point -> Game -> Either String Game
 validateCoords point@(Point (x, y)) game@(Game { size = size })
     | invalidCoords = Left "Invalid coordinates"
@@ -70,11 +75,11 @@ validateCoords point@(Point (x, y)) game@(Game { size = size })
 insertMove :: Point -> Game -> Either String Game
 insertMove point game@(Game { moves = moves, board = board }) =
     Right $ game {
-        moves = point:moves,
+        moves = (Just point):moves,
         board = Map.insert point (nextStone moves) board
     }
 
-nextStone :: [Point] -> Stone
+nextStone :: [Maybe Point] -> Stone
 nextStone moves
     | even (length moves) = Black
     | otherwise = White
@@ -149,13 +154,15 @@ deadGroup groupPoints
     | otherwise = map unwrap groupPoints
 
 removeCaptured :: Game -> Either String Game
-removeCaptured game@Game { board = board, moves = moves } =
-    Right $ game { board =
-       multiDelete (deadGroup upperGroup)
-       $ multiDelete (deadGroup lowerGroup)
-       $ multiDelete (deadGroup leftGroup)
-       $ multiDelete (deadGroup rightGroup) board
-    }
+removeCaptured game@Game { board = board, moves = moves }
+    | head moves == Nothing = Right game
+    | otherwise =
+        Right $ game { board =
+           multiDelete (deadGroup upperGroup)
+           $ multiDelete (deadGroup lowerGroup)
+           $ multiDelete (deadGroup leftGroup)
+           $ multiDelete (deadGroup rightGroup) board
+        }
 
     where up = Point (x, y - 1)
           down = Point (x, y + 1)
@@ -165,7 +172,7 @@ removeCaptured game@Game { board = board, moves = moves } =
           lowerGroup = collectGroup game down []
           leftGroup = collectGroup game left []
           rightGroup = collectGroup game right []
-          Point (x, y):_ = moves
+          Just (Point (x, y)):_ = moves
 
 multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
 multiDelete (key:keys) map = multiDelete keys $ Map.delete key map

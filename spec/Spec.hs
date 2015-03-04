@@ -20,3 +20,8 @@ main = hspec $ do
         it "cannot add a stone to coordinates outside the board" $ do
             let point = Point (20, 4) in
                 (addMove newGame point) `shouldBe` (Left "Invalid coordinates")
+
+    describe "Go.pass" $ do
+        it "lets the player pass" $ do
+            let Right (Game { moves = moves }) = pass newGame in
+                moves `shouldBe` [Nothing]
