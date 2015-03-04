@@ -19,3 +19,12 @@ cabal update
 cabal install --only-dependencies
 cabal run
 ```
+
+## TODO
+
+* Ko-rule
+* Game over
+* Scoring
+* Play via local network
+* Play via Go servers with APIs (e.g. https://online-go.com/)
+* Come up with a better name
