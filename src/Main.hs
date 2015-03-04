@@ -18,7 +18,9 @@ processInput (x:y) game = do
     parsedX <- case Map.lookup x coordLetters of
                    Just parsedX -> Right parsedX
                    Nothing -> Left "Invalid input"
-    parsedY <- Right (read y::Int)
+    parsedY <- case reads y of
+                   [(parsedY, "")] -> Right parsedY
+                   _ -> Left "Invalid input"
     addMove game $ Point (parsedX, parsedY)
 
 main = do
