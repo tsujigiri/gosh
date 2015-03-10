@@ -22,7 +22,6 @@ cabal run
 
 ## TODO
 
-* Ko-rule
 * Game over
 * Scoring
 * Play via local network

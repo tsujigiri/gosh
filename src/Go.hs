@@ -34,7 +34,7 @@ addMove game point = do
     return game
     >>= validateCoords point
     >>= insertMove point
-    >>= removeCaptured
+    >>= removeCapturedNeighbors
 
 pass :: Game -> Either String Game
 pass game@Game { moves = moves } = Right game { moves = Nothing:moves }
@@ -42,7 +42,7 @@ pass game@Game { moves = moves } = Right game { moves = Nothing:moves }
 validateCoords :: Point -> Game -> Either String Game
 validateCoords point@(Point (x, y)) game@(Game { size = size })
     | invalidCoords = Left "Invalid coordinates"
-    | taken = Left "Point taken"
+    | taken = Left "Invalid move"
     | otherwise = Right game
     where invalidCoords = x > size || x < 1 || y > size || y < 1
           taken = boardAt game point /= Nothing
@@ -72,6 +72,27 @@ coordLetters = Map.fromList [
         ('o', 14), ('p', 15), ('q', 16), ('r', 17), ('s', 18), ('t', 19)
     ]
 
+removeCapturedNeighbors :: Game -> Either String Game
+removeCapturedNeighbors game@Game { board = board, moves = moves }
+    | head moves == Nothing = Right game
+    | otherwise =
+        Right $ removeCaptured up
+              $ removeCaptured down
+              $ removeCaptured left
+              $ removeCaptured right game
+    where up = Point (x, y - 1)
+          down = Point (x, y + 1)
+          left = Point (x - 1, y)
+          right = Point (x + 1, y)
+          Just (Point (x, y)):_ = moves
+
+removeCaptured :: Point -> Game -> Game
+removeCaptured point game@Game { board = board }
+    | Just (nextStone game) /= boardAt game point = game
+    | length dead == 1 = game { board = (Map.insert point Ko board) }
+    | otherwise = game { board = (multiDelete dead board) }
+    where dead = deadGroup $ collectGroup game point []
+
 collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
 collectGroup game@(Game { size = size }) point@(Point (x, y)) seen
     | x < 1 || y < 1 || x > size || y > size = seen
@@ -94,27 +115,6 @@ deadGroup :: [Maybe Point] -> [Point]
 deadGroup groupPoints
     | any (== Nothing) groupPoints = []
     | otherwise = map unwrap groupPoints
-
-removeCaptured :: Game -> Either String Game
-removeCaptured game@Game { board = board, moves = moves }
-    | head moves == Nothing = Right game
-    | otherwise =
-        Right $ game { board =
-           multiDelete (deadGroup upperGroup)
-           $ multiDelete (deadGroup lowerGroup)
-           $ multiDelete (deadGroup leftGroup)
-           $ multiDelete (deadGroup rightGroup) board
-        }
-
-    where up = Point (x, y - 1)
-          down = Point (x, y + 1)
-          left = Point (x - 1, y)
-          right = Point (x + 1, y)
-          upperGroup = collectGroup game up []
-          lowerGroup = collectGroup game down []
-          leftGroup = collectGroup game left []
-          rightGroup = collectGroup game right []
-          Just (Point (x, y)):_ = moves
 
 multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
 multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
