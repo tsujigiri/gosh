@@ -22,7 +22,6 @@ cabal run
 
 ## TODO
 
-* Game over
 * Scoring
 * Play via local network
 * Play via Go servers with APIs (e.g. https://online-go.com/)

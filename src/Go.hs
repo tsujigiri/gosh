@@ -34,6 +34,7 @@ addMove game point = do
     return game
     >>= validateCoords point
     >>= clearKo
+    >>= checkGameOver
     >>= insertMove point
     >>= removeCapturedNeighbors
 
@@ -41,6 +42,7 @@ pass :: Game -> Either String Game
 pass game@Game { moves = moves } = do
     return game
     >>= clearKo
+    >>= checkGameOver
     >>= \game' -> Right game' { moves = Nothing:moves }
 
 validateCoords :: Point -> Game -> Either String Game
@@ -61,6 +63,10 @@ insertMove point game@(Game { moves = moves, board = board }) =
 clearKo :: Game -> Either String Game
 clearKo game@Game { board = board } =
     Right $ game { board = Map.filter (/= Ko) board }
+
+checkGameOver :: Game -> Either String Game
+checkGameOver Game { moves = Nothing:Nothing:_ } = Left "Game over"
+checkGameOver game = Right game
 
 nextStone :: Game -> Stone
 nextStone Game { moves = moves }

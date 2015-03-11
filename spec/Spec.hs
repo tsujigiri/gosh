@@ -37,6 +37,11 @@ main = hspec $ do
                 game = addMoves moves newGame in
                 boardAt game (Point (4, 4)) `shouldBe` Nothing
 
+        it "ends the game after second consecutive pass" $ do
+            let moves = ["pass", "pass"]
+                game = addMoves moves newGame in
+                addMove game (Point (4, 4)) `shouldBe` Left "Game over"
+
     describe "Go.pass" $ do
         it "lets the player pass" $ do
             let Right (Game { moves = moves }) = pass newGame in
@@ -46,6 +51,11 @@ main = hspec $ do
             let moves = ["d4", "d3", "pass", "d5", "pass", "c4", "pass", "e4", "pass"]
                 game = addMoves moves newGame in
                 boardAt game (Point (4, 4)) `shouldBe` Nothing
+
+        it "ends the game after second consecutive pass" $ do
+            let moves = ["pass", "pass"]
+                game = addMoves moves newGame in
+                pass game `shouldBe` Left "Game over"
 
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
