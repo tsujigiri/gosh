@@ -6,7 +6,7 @@ The game of Go for the command line
 
 This is work in progress and primarily a project for me to learn
 Haskell. So far you can add moves by typing coordinates or type "pass".
-Dead groups are removed from the board.
+Dead groups are removed from the board, Ko and game over are checked.
 
 
 ## Usage
