@@ -32,10 +32,20 @@ main = hspec $ do
                 game = addMoves moves newGame in
                 addMove game (Point (4, 4)) `shouldBe` Left "Invalid move"
 
+        it "clears Ko after one move" $ do
+            let moves = ["d4", "d3", "pass", "d5", "pass", "c4", "pass", "e4", "q16"]
+                game = addMoves moves newGame in
+                boardAt game (Point (4, 4)) `shouldBe` Nothing
+
     describe "Go.pass" $ do
         it "lets the player pass" $ do
             let Right (Game { moves = moves }) = pass newGame in
                 moves `shouldBe` [Nothing]
+
+        it "clears Ko after one pass" $ do
+            let moves = ["d4", "d3", "pass", "d5", "pass", "c4", "pass", "e4", "pass"]
+                game = addMoves moves newGame in
+                boardAt game (Point (4, 4)) `shouldBe` Nothing
 
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
