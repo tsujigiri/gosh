@@ -16,15 +16,16 @@ import Control.Applicative
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
 data Stone = Black | White | Ko deriving Eq
+data Board = Board (Map.Map Point Stone) deriving Eq
 data Game = Game {
-    board :: Map.Map Point Stone,
+    board :: Board,
     moves :: [Maybe Point],
     size :: Int
 } deriving Eq
 
 newGame :: Game
 newGame = Game {
-    board = Map.empty,
+    board = Board Map.empty,
     moves = [],
     size = 19
 }
@@ -54,15 +55,16 @@ validateCoords point@(Point (x, y)) game@(Game { size = size })
           taken = boardAt game point /= Nothing
 
 insertMove :: Point -> Game -> Either String Game
-insertMove point game@(Game { moves = moves, board = board }) =
+insertMove point game =
     Right $ game {
         moves = (Just point):moves,
-        board = Map.insert point (nextStone game) board
+        board = Board $ Map.insert point (nextStone game) board
     }
+    where Game { moves = moves, board = Board board } = game
 
 clearKo :: Game -> Either String Game
-clearKo game@Game { board = board } =
-    Right $ game { board = Map.filter (/= Ko) board }
+clearKo game@Game { board = Board board } =
+    Right $ game { board = Board $ Map.filter (/= Ko) board }
 
 checkGameOver :: Game -> Either String Game
 checkGameOver Game { moves = Nothing:Nothing:_ } = Left "Game over"
@@ -74,7 +76,7 @@ nextStone Game { moves = moves }
     | otherwise = White
 
 boardAt :: Game -> Point -> Maybe Stone
-boardAt (Game { board = board }) point = Map.lookup point board
+boardAt (Game { board = Board board }) point = Map.lookup point board
 
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
@@ -101,10 +103,10 @@ removeCapturedNeighbors game@Game { board = board, moves = moves }
           Just (Point (x, y)):_ = moves
 
 removeCaptured :: Point -> Game -> Game
-removeCaptured point game@Game { board = board }
+removeCaptured point game@Game { board = Board board }
     | Just (nextStone game) /= boardAt game point = game
-    | length dead == 1 = game { board = (Map.insert point Ko board) }
-    | otherwise = game { board = (multiDelete dead board) }
+    | length dead == 1 = game { board = Board $ Map.insert point Ko board }
+    | otherwise = game { board = Board $ multiDelete dead board }
     where dead = deadGroup $ collectGroup game point []
 
 collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
