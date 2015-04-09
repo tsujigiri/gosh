@@ -40,18 +40,20 @@ addMove game point = do
     >>= removeCapturedNeighbors
 
 pass :: Game -> Either String Game
-pass game@Game { moves = moves } = do
+pass game = do
     return game
     >>= clearKo
     >>= checkGameOver
-    >>= \game' -> Right game' { moves = Nothing:moves }
+    >>= \game' -> Right game' { moves = Nothing:(moves game) }
 
 validateCoords :: Point -> Game -> Either String Game
-validateCoords point@(Point (x, y)) game@(Game { size = size })
+validateCoords point game
     | invalidCoords = Left "Invalid coordinates"
     | taken = Left "Invalid move"
     | otherwise = Right game
-    where invalidCoords = x > size || x < 1 || y > size || y < 1
+    where Game { size = size } = game
+          Point (x, y) = point
+          invalidCoords = x > size || x < 1 || y > size || y < 1
           taken = boardAt game point /= Nothing
 
 insertMove :: Point -> Game -> Either String Game
