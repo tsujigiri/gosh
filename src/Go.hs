@@ -25,12 +25,23 @@ data Game = Game {
     size :: Int
 } deriving Eq
 
+data SegmentAndAdjacent = SegmentAndAdjacent {
+    segment :: Board,
+    segmentType :: Maybe Stone
+} deriving Eq
+
 newGame :: Game
 newGame = Game {
     board = Map.empty,
     moves = [],
     size = 19
 }
+
+newSegment :: Maybe Stone -> SegmentAndAdjacent
+newSegment segmentType = SegmentAndAdjacent {
+    segment = Map.empty,
+    segmentType = segmentType
+    }
 
 addMove :: Game -> Point -> Either String Game
 addMove game point = do
@@ -139,4 +150,35 @@ deadGroup groupPoints
 multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
 multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
 multiDelete [] map = map
+
+collectSegmentsAndAdjacent :: Game -> [SegmentAndAdjacent]
+collectSegmentsAndAdjacent game =
+    nub $ map (\point -> collectSegmentAt game point (newSegment (boardAt game point))) allPoints
+    where allPoints = [ Point (x, y) | x <- [1..size game], y <- [1..size game] ]
+
+collectSegmentAt :: Game -> Point -> SegmentAndAdjacent -> SegmentAndAdjacent
+collectSegmentAt game point segmentAndAdjacent
+    | x < 1 || y < 1 || x > size || y > size = segmentAndAdjacent
+    | null segment = collectSegmentAt game point segmentAndAdjacent { segmentType = currentStone }
+    | Map.member point segment = segmentAndAdjacent
+    | currentStone == segmentType =
+        foldl (flip ($)) segmentAndAdjacent' (map (collectSegmentAt game) [up, down, left, right])
+    | otherwise = segmentAndAdjacent { segment = updateBoard point currentStone segment }
+    where Game { size = size } = game
+          SegmentAndAdjacent { segment = segment, segmentType = segmentType } =
+              segmentAndAdjacent
+          currentStone = boardAt game point
+          segmentAndAdjacent' = segmentAndAdjacent {
+              segment = updateBoard point currentStone segment,
+              segmentType = segmentType
+              }
+          Point (x, y) = point
+          up = Point (x, y - 1)
+          down = Point (x, y + 1)
+          left = Point (x - 1, y)
+          right = Point (x + 1, y)
+
+updateBoard :: Point -> Maybe Stone -> (Board -> Board)
+updateBoard point Nothing = Map.delete point
+updateBoard point (Just stone) = Map.insert point stone
 
