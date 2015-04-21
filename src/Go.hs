@@ -5,7 +5,6 @@ module Go (
     coordLetters,
     nextStone,
     boardAt,
-    collectGroup,
 
     Game(..),
     Point(..),
@@ -15,9 +14,10 @@ module Go (
 import Data.List
 import qualified Data.Map.Lazy as Map
 import Control.Applicative
+import Data.Maybe
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
-data Stone = Black | White | Ko deriving Eq
+data Stone = Empty | Black | White | Ko deriving Eq
 type Board = Map.Map Point Stone
 data Game = Game {
     board :: Board,
@@ -27,17 +27,17 @@ data Game = Game {
 
 data SegmentAndAdjacent = SegmentAndAdjacent {
     segment :: Board,
-    segmentType :: Maybe Stone
+    segmentType :: Stone
 } deriving Eq
 
 newGame :: Game
 newGame = Game {
-    board = Map.empty,
+    board = Map.fromList [ ((Point (x, y)), Empty) | x <- [1..19], y <- [1..19] ],
     moves = [],
     size = 19
 }
 
-newSegment :: Maybe Stone -> SegmentAndAdjacent
+newSegment :: Stone -> SegmentAndAdjacent
 newSegment segmentType = SegmentAndAdjacent {
     segment = Map.empty,
     segmentType = segmentType
@@ -67,19 +67,22 @@ validateCoords point game
     where Game { size = size } = game
           Point (x, y) = point
           invalidCoords = x > size || x < 1 || y > size || y < 1
-          taken = boardAt game point /= Nothing
+          taken = boardAt game point /= Just Empty
 
 insertMove :: Point -> Game -> Either String Game
 insertMove point game =
     Right $ game {
         moves = (Just point):moves,
-        board = updateBoard point (Just (nextStone game)) board
+        board = updateBoard point (nextStone game) board
     }
     where Game { moves = moves, board = board } = game
 
 clearKo :: Game -> Either String Game
-clearKo game@Game { board = board } =
-    Right $ game { board = Map.filter (/= Ko) board }
+clearKo game =
+    Right $ game { board = Map.map emptyKo board }
+        where Game { board = board } = game
+              emptyKo Ko = Empty
+              emptyKo a = a
 
 checkGameOver :: Game -> Either String Game
 checkGameOver Game { moves = Nothing:Nothing:_ } = Left "Game over"
@@ -91,7 +94,8 @@ nextStone Game { moves = moves }
     | otherwise = White
 
 boardAt :: Game -> Point -> Maybe Stone
-boardAt (Game { board = board }) point = Map.lookup point board
+boardAt game point = Map.lookup point board
+    where Game { board = board } = game
 
 unwrap :: Maybe a -> a
 unwrap (Just a) = a
@@ -118,56 +122,28 @@ removeCapturedNeighbors game@Game { board = board, moves = moves }
           Just (Point (x, y)):_ = moves
 
 removeCaptured :: Point -> Game -> Game
-removeCaptured point game@Game { board = board }
+removeCaptured point game
     | Just (nextStone game) /= boardAt game point = game
     | length dead == 1 = game { board = Map.insert point Ko board }
-    | otherwise = game { board = multiDelete dead board }
-    where dead = deadGroup $ collectGroup game point []
-
-collectGroup :: Game -> Point -> [Maybe Point] -> [Maybe Point]
-collectGroup game@(Game { size = size }) point@(Point (x, y)) seen
-    | x < 1 || y < 1 || x > size || y > size = seen
-    | currentPoint == Just Ko || currentPoint == Nothing = Nothing:seen
-    | elem (pure point) seen = seen
-    | seen == [] || head(seen) == Nothing || currentPoint == boardAt game (unwrap . head $ seen) =
-        groupInGame up
-        . groupInGame down
-        . groupInGame left
-        . groupInGame right $ (pure point):seen
-    | otherwise = seen
-    where currentPoint = boardAt game point
-          up = Point (x, y - 1)
-          down = Point (x, y + 1)
-          left = Point (x - 1, y)
-          right = Point (x + 1, y)
-          groupInGame = collectGroup game
-
-deadGroup :: [Maybe Point] -> [Point]
-deadGroup groupPoints
-    | any (== Nothing) groupPoints = []
-    | otherwise = map unwrap groupPoints
-
-multiDelete :: Ord a => [a] -> Map.Map a b -> Map.Map a b
-multiDelete (key:keys) map = multiDelete keys $ Map.delete key map
-multiDelete [] map = map
-
-collectSegmentsAndAdjacent :: Game -> [SegmentAndAdjacent]
-collectSegmentsAndAdjacent game =
-    nub $ map (\point -> collectSegmentAt game point (newSegment (boardAt game point))) allPoints
-    where allPoints = [ Point (x, y) | x <- [1..size game], y <- [1..size game] ]
+    | otherwise = game { board = multiInsert dead Empty board }
+    where dead = deadGroup $ collectSegmentAt game point $ newSegment $ fromJust $ boardAt game point
+          Game { board = board } = game
 
 collectSegmentAt :: Game -> Point -> SegmentAndAdjacent -> SegmentAndAdjacent
 collectSegmentAt game point segmentAndAdjacent
     | x < 1 || y < 1 || x > size || y > size = segmentAndAdjacent
-    | null segment = collectSegmentAt game point segmentAndAdjacent { segmentType = currentStone }
     | Map.member point segment = segmentAndAdjacent
     | currentStone == segmentType =
-        foldl (flip ($)) segmentAndAdjacent' (map (collectSegmentAt game) [up, down, left, right])
+        (collectSegmentAt game up)
+        . (collectSegmentAt game down)
+        . (collectSegmentAt game left)
+        . (collectSegmentAt game right)
+        $ segmentAndAdjacent'
     | otherwise = segmentAndAdjacent { segment = updateBoard point currentStone segment }
     where Game { size = size } = game
           SegmentAndAdjacent { segment = segment, segmentType = segmentType } =
               segmentAndAdjacent
-          currentStone = boardAt game point
+          Just currentStone = boardAt game point
           segmentAndAdjacent' = segmentAndAdjacent {
               segment = updateBoard point currentStone segment,
               segmentType = segmentType
@@ -178,7 +154,18 @@ collectSegmentAt game point segmentAndAdjacent
           left = Point (x - 1, y)
           right = Point (x + 1, y)
 
-updateBoard :: Point -> Maybe Stone -> (Board -> Board)
-updateBoard point Nothing = Map.delete point
-updateBoard point (Just stone) = Map.insert point stone
+deadGroup :: SegmentAndAdjacent -> [Point]
+deadGroup SegmentAndAdjacent { segment = segment, segmentType = segmentType }
+    | any (== Empty) (Map.elems segment) = []
+    | otherwise = Map.foldMapWithKey collectEquals segment
+        where collectEquals k v = if v == segmentType then
+                                      [k]
+                                  else
+                                      []
+
+multiInsert :: Ord k => [k] -> v -> Map.Map k v -> Map.Map k v
+multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
+
+updateBoard :: Point -> Stone -> (Board -> Board)
+updateBoard point stone = Map.insert point stone
 

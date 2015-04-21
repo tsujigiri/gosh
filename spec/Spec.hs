@@ -11,7 +11,7 @@ main = hspec $ do
         it "adds a black stone to an empty board" $ do
             let point = Point (3, 4)
                 Right game = addMove newGame point in
-                (boardAt game point) `shouldBe` (Just Black)
+                (boardAt game point) `shouldBe` Just Black
 
         it "cannot add a stone to a place already taken" $ do
             let point = Point (3, 4)
@@ -35,7 +35,7 @@ main = hspec $ do
         it "clears Ko after one move" $ do
             let moves = ["d4", "d3", "pass", "d5", "pass", "c4", "pass", "e4", "q16"]
                 game = addMoves moves newGame in
-                boardAt game (Point (4, 4)) `shouldBe` Nothing
+                boardAt game (Point (4, 4)) `shouldBe` Just Empty
 
         it "ends the game after second consecutive pass" $ do
             let moves = ["pass", "pass"]
@@ -50,7 +50,7 @@ main = hspec $ do
         it "clears Ko after one pass" $ do
             let moves = ["d4", "d3", "pass", "d5", "pass", "c4", "pass", "e4", "pass"]
                 game = addMoves moves newGame in
-                boardAt game (Point (4, 4)) `shouldBe` Nothing
+                boardAt game (Point (4, 4)) `shouldBe` Just Empty
 
         it "ends the game after second consecutive pass" $ do
             let moves = ["pass", "pass"]

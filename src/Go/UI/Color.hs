@@ -30,13 +30,10 @@ drawRow game = do
 
 drawBoard :: Game -> Point -> String
 drawBoard game point
-    | stone == Nothing = gridAt size point
-    | otherwise = (show (unwrap stone)) ++ (tail (gridAt size point))
-    where stone = boardAt game point
+    | stone == Empty = gridAt size point
+    | otherwise = (show stone) ++ (tail (gridAt size point))
+    where Just stone = boardAt game point
           Game { size = size } = game
-
-boardColors :: String
-boardColors = fgBlack ++ bgYellow
 
 showYCoord :: Int -> String
 showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
