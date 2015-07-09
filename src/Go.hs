@@ -123,22 +123,19 @@ removeCapturedNeighbors game@Game { board = board, moves = moves }
 
 removeCaptured :: Point -> Game -> Game
 removeCaptured point game
-    | Just (nextStone game) /= boardAt game point = game
+    | nextStone game /= currentStone = game
     | length dead == 1 = game { board = Map.insert point Ko board }
     | otherwise = game { board = multiInsert dead Empty board }
-    where dead = deadGroup $ collectSegmentAt game point $ newSegment $ fromJust $ boardAt game point
+    where dead = deadGroup $ collectSegmentAt game (newSegment currentStone) point
+          Just currentStone = boardAt game point
           Game { board = board } = game
 
-collectSegmentAt :: Game -> Point -> SegmentAndAdjacent -> SegmentAndAdjacent
-collectSegmentAt game point segmentAndAdjacent
+collectSegmentAt :: Game -> SegmentAndAdjacent -> Point -> SegmentAndAdjacent
+collectSegmentAt game segmentAndAdjacent point
     | x < 1 || y < 1 || x > size || y > size = segmentAndAdjacent
     | Map.member point segment = segmentAndAdjacent
     | currentStone == segmentType =
-        (collectSegmentAt game up)
-        . (collectSegmentAt game down)
-        . (collectSegmentAt game left)
-        . (collectSegmentAt game right)
-        $ segmentAndAdjacent'
+        foldl (collectSegmentAt game) segmentAndAdjacent' [up, down, left, right]
     | otherwise = segmentAndAdjacent { segment = updateBoard point currentStone segment }
     where Game { size = size } = game
           SegmentAndAdjacent { segment = segment, segmentType = segmentType } =
@@ -168,4 +165,3 @@ multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
 
 updateBoard :: Point -> Stone -> (Board -> Board)
 updateBoard point stone = Map.insert point stone
-
