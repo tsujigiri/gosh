@@ -97,9 +97,6 @@ boardAt :: Game -> Point -> Maybe Stone
 boardAt game point = Map.lookup point board
     where Game { board = board } = game
 
-unwrap :: Maybe a -> a
-unwrap (Just a) = a
-
 coordLetters :: Map.Map Char Int
 coordLetters = Map.fromList [
         ('a', 1), ('b', 2), ('c', 3), ('d', 4), ('e', 5), ('f', 6), ('g', 7),
