@@ -107,11 +107,7 @@ coordLetters = Map.fromList [
 removeCapturedNeighbors :: Game -> Either String Game
 removeCapturedNeighbors game@Game { board = board, moves = moves }
     | head moves == Nothing = Right game
-    | otherwise =
-        Right $ removeCaptured up
-              $ removeCaptured down
-              $ removeCaptured left
-              $ removeCaptured right game
+    | otherwise = Right $ foldl (flip removeCaptured) game [up, down, left, right]
     where up = Point (x, y - 1)
           down = Point (x, y + 1)
           left = Point (x - 1, y)
