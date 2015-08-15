@@ -5,6 +5,7 @@ module Go (
     coordLetters,
     nextStone,
     boardAt,
+    score,
 
     Game(..),
     Point(..),
@@ -14,6 +15,8 @@ module Go (
 import Data.List
 import qualified Data.Map.Lazy as Map
 import Control.Applicative
+import Control.Monad.State
+import Control.Monad.List
 import Data.Maybe
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
@@ -158,3 +161,21 @@ multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
 
 updateBoard :: Point -> Stone -> (Board -> Board)
 updateBoard point stone = Map.insert point stone
+
+score :: Game -> [SegmentAndAdjacent]
+score game = (flip evalState) [] $ runListT $ do
+    emptyPoint <- ListT . return $ emptyPoints game
+    seen <- lift get
+    guard $ emptyPoint `notElem` seen
+    let s = collectSegmentAt game (newSegment Empty) emptyPoint
+    lift $ modify ((Map.keys (Map.filter (== Empty) (segment s))) ++)
+    return s
+
+emptyPoints :: Game -> [Point]
+emptyPoints = Map.keys . Map.filter (== Empty) . board
+
+allPoints :: Game -> [Point]
+allPoints Game { size = size } = do
+    x <- [1..size]
+    y <- [1..size]
+    return $ Point (x, y)
