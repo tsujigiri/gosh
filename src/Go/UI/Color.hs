@@ -11,29 +11,32 @@ instance Show Stone where
     show Ko = "□"
 
 instance Show Game where
-    show game@Game { size = size } =
-        showXCoords
-        ++ "\n"
-        ++ concat [
-            concat (
-                    [showYCoord y]
-                    ++ [boardColors]
-                    ++ [drawBoard game (Point (x, y)) | x <- [1..size] ]
-                    ++ [reset]
-                    ++ [" "]
-                    ++ [showYCoord y]
-                    ++ ["\n"]
-            ) | y <- [1..size]
-        ] ++ showXCoords
+    show = drawGame
 
-boardColors :: String
-boardColors = fgBlack ++ bgYellow
+drawGame :: Game -> String
+drawGame game = concat [showXCoords, "\n", drawRow game, showXCoords]
+
+drawRow :: Game -> String
+drawRow game = do
+    y <- [1..(size game)]
+    concat [showYCoord y
+           ,boardColors
+           ,concat [drawBoard game $ Point (x, y) | x <- [1..(size game)] ]
+           ,reset
+           ," "
+           ,showYCoord y
+           ,"\n"
+           ]
 
 drawBoard :: Game -> Point -> String
-drawBoard game@(Game { size = size }) point
+drawBoard game point
     | stone == Nothing = gridAt size point
     | otherwise = (show (unwrap stone)) ++ (tail (gridAt size point))
     where stone = boardAt game point
+          Game { size = size } = game
+
+boardColors :: String
+boardColors = fgBlack ++ bgYellow
 
 showYCoord :: Int -> String
 showYCoord y = (replicate (2 - length coord) ' ') ++ coord ++ " "
