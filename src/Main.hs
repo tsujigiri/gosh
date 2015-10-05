@@ -24,7 +24,7 @@ processInput (x:y) game = do
     parsedY <- case reads y of
                    [(parsedY, "")] -> Right parsedY
                    _ -> Left "Invalid input"
-    addMove game $ Point (parsedX, parsedY)
+    addMove (Point (parsedX, parsedY)) game
 
 printPrompt :: Game -> IO ()
 printPrompt game = do

@@ -46,8 +46,8 @@ newSegment segmentType = SegmentAndAdjacent {
     segmentType = segmentType
     }
 
-addMove :: Game -> Point -> Either String Game
-addMove game point = do
+addMove :: Point -> Game -> Either String Game
+addMove point game = do
     return game
     >>= validateCoords point
     >>= clearKo
@@ -151,10 +151,8 @@ deadGroup :: SegmentAndAdjacent -> [Point]
 deadGroup SegmentAndAdjacent { segment = segment, segmentType = segmentType }
     | any (== Empty) (Map.elems segment) = []
     | otherwise = Map.foldMapWithKey collectEquals segment
-        where collectEquals k v = if v == segmentType then
-                                      [k]
-                                  else
-                                      []
+        where collectEquals k v = if v == segmentType then [k]
+                                                      else []
 
 multiInsert :: Ord k => [k] -> v -> Map.Map k v -> Map.Map k v
 multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
