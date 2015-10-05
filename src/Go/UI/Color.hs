@@ -9,24 +9,26 @@ instance Show Stone where
     show Black = "●"
     show White = fgWhite ++ "●" ++ fgBlack
     show Ko = "□"
+    show Empty = " "
 
 instance Show Game where
-    show = drawGame
+    show game@Game { size = size } =
+        showXCoords
+        ++ "\n"
+        ++ concat [
+            concat (
+                    [showYCoord y]
+                    ++ [boardColors]
+                    ++ [drawBoard game (Point (x, y)) | x <- [1..size] ]
+                    ++ [reset]
+                    ++ [" "]
+                    ++ [showYCoord y]
+                    ++ ["\n"]
+            ) | y <- [1..size]
+        ] ++ showXCoords
 
-drawGame :: Game -> String
-drawGame game = concat [showXCoords, "\n", drawRow game, showXCoords]
-
-drawRow :: Game -> String
-drawRow game = do
-    y <- [1..(size game)]
-    concat [showYCoord y
-           ,boardColors
-           ,concat [drawBoard game $ Point (x, y) | x <- [1..(size game)] ]
-           ,reset
-           ," "
-           ,showYCoord y
-           ,"\n"
-           ]
+boardColors :: String
+boardColors = fgBlack ++ bgYellow
 
 drawBoard :: Game -> Point -> String
 drawBoard game point
