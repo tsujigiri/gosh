@@ -57,6 +57,13 @@ main = hspec $ do
                 game = addMoves moves newGame in
                 pass game `shouldBe` Left "Game over"
 
+    describe "Go.score" $ do
+        it "returns a score" $ do
+            let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
+                         "d2", "pass", "d1"]
+                game = addMoves moves newGame in
+                score game `shouldBe` [(Black, 2), (White, 349)]
+
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
 addMoves ("pass":moves) game = addMoves moves game'

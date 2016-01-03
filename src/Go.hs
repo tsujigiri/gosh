@@ -64,12 +64,11 @@ pass game = do
 
 validateCoords :: Point -> Game -> Either String Game
 validateCoords point game
-    | invalidCoords = Left "Invalid coordinates"
+    | isOffBoard point game = Left "Invalid coordinates"
     | taken = Left "Invalid move"
     | otherwise = Right game
     where Game { size = size } = game
           Point (x, y) = point
-          invalidCoords = x > size || x < 1 || y > size || y < 1
           taken = boardAt game point /= Just Empty
 
 insertMove :: Point -> Game -> Either String Game
@@ -119,16 +118,18 @@ removeCapturedNeighbors game@Game { board = board, moves = moves }
 
 removeCaptured :: Point -> Game -> Game
 removeCaptured point game
+    | isOffBoard point game = game
     | nextStone game /= currentStone = game
     | length dead == 1 = game { board = Map.insert point Ko board }
     | otherwise = game { board = multiInsert dead Empty board }
     where dead = deadGroup $ collectSegmentAt game (newSegment currentStone) point
           Just currentStone = boardAt game point
-          Game { board = board } = game
+          Game { board = board, size = size } = game
+          Point (x, y) = point
 
 collectSegmentAt :: Game -> SegmentAndAdjacent -> Point -> SegmentAndAdjacent
 collectSegmentAt game segmentAndAdjacent point
-    | x < 1 || y < 1 || x > size || y > size = segmentAndAdjacent
+    | isOffBoard point game = segmentAndAdjacent
     | Map.member point segment = segmentAndAdjacent
     | currentStone == segmentType =
         foldl (collectSegmentAt game) segmentAndAdjacent' [up, down, left, right]
@@ -160,20 +161,37 @@ multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
 updateBoard :: Point -> Stone -> (Board -> Board)
 updateBoard point stone = Map.insert point stone
 
-score :: Game -> [SegmentAndAdjacent]
+-- score :: Game -> [SegmentAndAdjacent]
 score game = (flip evalState) [] $ runListT $ do
-    emptyPoint <- ListT . return $ emptyPoints game
-    seen <- lift get
+    emptyPoint <- ListT . return $ emptyPoints $ board game
+    seen <- get
     guard $ emptyPoint `notElem` seen
     let s = collectSegmentAt game (newSegment Empty) emptyPoint
-    lift $ modify ((Map.keys (Map.filter (== Empty) (segment s))) ++)
-    return s
+    modify (emptyPoints (segment s) ++)
+    let maybeOccupier = occupier s
+    guard $ maybeOccupier /= Nothing
+    let Just occupier = maybeOccupier
+    return $ (occupier, length . filter (Empty ==) . Map.elems . segment $ s)
 
-emptyPoints :: Game -> [Point]
-emptyPoints = Map.keys . Map.filter (== Empty) . board
+emptyPoints :: Board -> [Point]
+emptyPoints = Map.keys . Map.filter (== Empty)
 
 allPoints :: Game -> [Point]
 allPoints Game { size = size } = do
     x <- [1..size]
     y <- [1..size]
     return $ Point (x, y)
+
+isOffBoard :: Point -> Game -> Bool
+isOffBoard point game = x < 1 || y < 1 || x > size || y > size
+    where Point (x, y) = point
+          Game { size = size } = game
+
+occupier :: SegmentAndAdjacent -> Maybe Stone
+occupier s = if Black `elem` stones && White `notElem` stones then
+                 Just Black
+             else if Black `notElem` stones && White `elem` stones then
+                 Just White
+             else
+                 Nothing
+    where stones = filter (Empty /=) . Map.elems . segment $ s
