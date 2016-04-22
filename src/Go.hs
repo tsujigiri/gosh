@@ -6,6 +6,7 @@ module Go (
     nextStone,
     boardAt,
     score,
+    markDead,
 
     Game(..),
     Point(..),
@@ -25,7 +26,8 @@ type Board = Map.Map Point Stone
 data Game = Game {
     board :: Board,
     moves :: [Maybe Point],
-    size :: Int
+    size :: Int,
+    dead :: [Point]
 } deriving Eq
 
 data SegmentAndAdjacent = SegmentAndAdjacent {
@@ -37,7 +39,8 @@ newGame :: Game
 newGame = Game {
     board = Map.fromList [ ((Point (x, y)), Empty) | x <- [1..19], y <- [1..19] ],
     moves = [],
-    size = 19
+    size = 19,
+    dead = []
 }
 
 newSegment :: Stone -> SegmentAndAdjacent
@@ -134,7 +137,7 @@ collectSegmentAt game segmentAndAdjacent point
     | currentStone == segmentType =
         foldl (collectSegmentAt game) segmentAndAdjacent' [up, down, left, right]
     | otherwise = segmentAndAdjacent { segment = updateBoard point currentStone segment }
-    where Game { size = size } = game
+    where Game { size = size, dead = dead } = game
           SegmentAndAdjacent { segment = segment, segmentType = segmentType } =
               segmentAndAdjacent
           Just currentStone = boardAt game point
@@ -161,17 +164,9 @@ multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
 updateBoard :: Point -> Stone -> (Board -> Board)
 updateBoard point stone = Map.insert point stone
 
--- score :: Game -> [SegmentAndAdjacent]
-score game = (flip evalState) [] $ runListT $ do
-    emptyPoint <- ListT . return $ emptyPoints $ board game
-    seen <- get
-    guard $ emptyPoint `notElem` seen
-    let s = collectSegmentAt game (newSegment Empty) emptyPoint
-    modify (emptyPoints (segment s) ++)
-    let maybeOccupier = occupier s
-    guard $ maybeOccupier /= Nothing
-    let Just occupier = maybeOccupier
-    return $ (occupier, length . filter (Empty ==) . Map.elems . segment $ s)
+markDead :: Point -> Game -> Game
+markDead point game = game { dead = point : dead  }
+    where Game { dead = dead } = game
 
 emptyPoints :: Board -> [Point]
 emptyPoints = Map.keys . Map.filter (== Empty)
@@ -187,11 +182,36 @@ isOffBoard point game = x < 1 || y < 1 || x > size || y > size
     where Point (x, y) = point
           Game { size = size } = game
 
-occupier :: SegmentAndAdjacent -> Maybe Stone
-occupier s = if Black `elem` stones && White `notElem` stones then
-                 Just Black
-             else if Black `notElem` stones && White `elem` stones then
-                 Just White
-             else
-                 Nothing
-    where stones = filter (Empty /=) . Map.elems . segment $ s
+score :: Game -> [(Stone, Int)]
+score game = (flip evalState) [] $ runListT $ do
+    emptyPoint <- ListT . return $ emptyPoints $ board game
+    visitedPoints <- lift get
+    guard $ emptyPoint `notElem` visitedPoints
+    let currentSegment = collectSegmentAt game (newSegment Empty) emptyPoint
+    lift $ modify (emptyPoints (segment currentSegment) ++)
+    let maybeOccupier = occupier currentSegment (dead game)
+    guard $ maybeOccupier /= Nothing
+    let Just occupier = maybeOccupier
+    return $ (occupier, count currentSegment (dead game))
+
+occupier :: SegmentAndAdjacent -> [Point] -> Maybe Stone
+occupier s dead = if Black `elem` stones && (White `notElem` stones || whiteIsDead) then
+                      Just Black
+                  else if White `elem` stones && (Black `notElem` stones || blackIsDead) then
+                      Just White
+                  else
+                      Nothing
+    where nonEmpty = Map.filter (/= Empty) (segment s)
+          stones = Map.elems nonEmpty
+          nonEmptyPoints = Map.keys nonEmpty
+          occupiedBy stone = Map.keys $ Map.filter (== stone) (segment s)
+          whiteIsDead = not . null $ occupiedBy White `intersect` dead
+          blackIsDead = not . null $ occupiedBy Black `intersect` dead
+
+count :: SegmentAndAdjacent -> [Point] -> Int
+count currentSegment dead = 2 * (length relevantDead) + (length emptyPoints)
+    where relevantDead = filter (isInSegment currentSegment) dead
+          emptyPoints = filter (Empty ==) . Map.elems . segment $ currentSegment
+
+isInSegment :: SegmentAndAdjacent -> Point -> Bool
+isInSegment s p = (p `elem`) . Map.keys . segment $ s

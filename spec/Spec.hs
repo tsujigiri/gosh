@@ -64,6 +64,19 @@ main = hspec $ do
                 game = addMoves moves newGame in
                 score game `shouldBe` [(Black, 2), (White, 349)]
 
+        it "doesn't count territory with oponent's stones in it" $ do
+            let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
+                         "d2", "pass", "d1", "k10"]
+                game = addMoves moves newGame in
+                score game `shouldBe` [(Black, 2)]
+
+        it "takes stones marked as dead into account" $ do
+            let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
+                         "d2", "pass", "d1", "k10"]
+                game = markDead (Point (10, 10)) . addMoves moves $ newGame in
+                score game `shouldBe` [(Black, 2), (White, 350)]
+
+
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
 addMoves ("pass":moves) game = addMoves moves game'
