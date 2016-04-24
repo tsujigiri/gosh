@@ -76,6 +76,12 @@ main = hspec $ do
                 game = markDead (Point (10, 10)) . addMoves moves $ newGame in
                 score game `shouldBe` [(Black, 2), (White, 350)]
 
+        it "takes stones marked as dead into account" $ do
+            let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
+                         "d2", "pass", "d1", "k10", "pass", "l9", "pass", "m10",
+                         "pass", "l11"]
+                game = markDead (Point (10, 10)) . addMoves moves $ newGame in
+                score game `shouldBe` [(Black, 2), (White, 353)]
 
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
