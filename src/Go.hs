@@ -192,7 +192,7 @@ score game = (flip evalState) [] $ runListT $ do
     let maybeOccupier = occupier currentSegment (dead game)
     guard $ maybeOccupier /= Nothing
     let Just occupier = maybeOccupier
-    return $ (occupier, count currentSegment (dead game))
+    return $ (occupier, count currentSegment occupier)
 
 occupier :: SegmentAndAdjacent -> [Point] -> Maybe Stone
 occupier s dead = if Black `elem` stones && (White `notElem` stones || whiteIsDead) then
@@ -203,15 +203,22 @@ occupier s dead = if Black `elem` stones && (White `notElem` stones || whiteIsDe
                       Nothing
     where nonEmpty = Map.filter (/= Empty) (segment s)
           stones = Map.elems nonEmpty
-          nonEmptyPoints = Map.keys nonEmpty
           occupiedBy stone = Map.keys $ Map.filter (== stone) (segment s)
           whiteIsDead = not . null $ occupiedBy White `intersect` dead
           blackIsDead = not . null $ occupiedBy Black `intersect` dead
 
-count :: SegmentAndAdjacent -> [Point] -> Int
-count currentSegment dead = 2 * (length relevantDead) + (length emptyPoints)
-    where relevantDead = filter (isInSegment currentSegment) dead
-          emptyPoints = filter (Empty ==) . Map.elems . segment $ currentSegment
+count :: SegmentAndAdjacent -> Stone -> Int
+count currentSegment occupier = territory + captured * 2
+    where captured = length . Map.keys $ Map.filter (== (opponent occupier)) (segment currentSegment)
+          territory = length . Map.keys $ Map.filter (== Empty) (segment currentSegment)
 
 isInSegment :: SegmentAndAdjacent -> Point -> Bool
 isInSegment s p = (p `elem`) . Map.keys . segment $ s
+
+occupierLives :: SegmentAndAdjacent -> Game -> Stone -> Bool
+occupierLives s g o = (== 0) . length . Map.keys $ Map.filterWithKey deadOccupierStones (segment s)
+    where deadOccupierStones point stone = stone == o && point `elem` (dead g)
+
+opponent :: Stone -> Stone
+opponent Black = White
+opponent White = Black
