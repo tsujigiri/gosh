@@ -112,15 +112,15 @@ coordLetters = Map.fromList [
 removeCapturedNeighbors :: Game -> Either String Game
 removeCapturedNeighbors game@Game { board = board, moves = moves }
     | head moves == Nothing = Right game
-    | otherwise = Right $ foldl (flip removeCaptured) game [up, down, left, right]
+    | otherwise = Right $ foldl removeCaptured game [up, down, left, right]
     where up = Point (x, y - 1)
           down = Point (x, y + 1)
           left = Point (x - 1, y)
           right = Point (x + 1, y)
           Just (Point (x, y)):_ = moves
 
-removeCaptured :: Point -> Game -> Game
-removeCaptured point game
+removeCaptured :: Game -> Point -> Game
+removeCaptured game point
     | isOffBoard point game = game
     | nextStone game /= currentStone = game
     | length dead == 1 = game { board = Map.insert point Ko board }
@@ -161,7 +161,7 @@ deadGroup SegmentAndAdjacent { segment = segment, segmentType = segmentType }
 multiInsert :: Ord k => [k] -> v -> Map.Map k v -> Map.Map k v
 multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
 
-updateBoard :: Point -> Stone -> (Board -> Board)
+updateBoard :: Point -> Stone -> Board -> Board
 updateBoard point stone = Map.insert point stone
 
 markDead :: Point -> Game -> Game
