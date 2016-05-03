@@ -11,13 +11,19 @@ Dead groups are removed from the board, Ko and game over are checked.
 
 ## Usage
 
-In order to run it, you need to have cabal installed. Install all the
-dependencies and run the program with:
+In order to run it, you need to have (Stack)[http://haskellstack.org/]
+installed. Install all the dependencies and run the program with:
 
 ```bash
-cabal update
-cabal install --only-dependencies
-cabal run
+stack setup
+stack build
+stack exec go
+```
+
+To run the tests:
+
+```bash
+stack test
 ```
 
 ## TODO
