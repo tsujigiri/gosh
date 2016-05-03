@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+if [ -f $HOME/.local/bin/stack ]
+then
+    echo 'Stack present, skipping download.'
+    exit 0
+fi
+echo 'Downloading Stack...'
+mkdir -p ~/.local/bin
+export PATH=$HOME/.local/bin:$PATH
+curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
