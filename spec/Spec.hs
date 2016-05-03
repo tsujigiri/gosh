@@ -62,26 +62,26 @@ main = hspec $ do
             let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
                          "d2", "pass", "d1"]
                 game = addMoves moves newGame in
-                score game `shouldBe` [(Black, 2), (White, 349)]
+                score game `shouldBe` Map.fromList [(Black, 2), (White, 349)]
 
         it "doesn't count territory with oponent's stones in it" $ do
             let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
                          "d2", "pass", "d1", "k10"]
                 game = addMoves moves newGame in
-                score game `shouldBe` [(Black, 2)]
+                score game `shouldBe` Map.fromList [(Black, 2)]
 
         it "takes stones marked as dead into account" $ do
             let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
                          "d2", "pass", "d1", "k10"]
                 game = markDead (Point (10, 10)) . addMoves moves $ newGame in
-                score game `shouldBe` [(Black, 2), (White, 350)]
+                score game `shouldBe` Map.fromList [(Black, 2), (White, 350)]
 
         it "takes stones marked as dead into account" $ do
             let moves = ["a2", "a3", "b2", "b3", "c2", "c3", "c1", "d3", "pass",
                          "d2", "pass", "d1", "k10", "pass", "l9", "pass", "m10",
                          "pass", "l11"]
                 game = markDead (Point (10, 10)) . addMoves moves $ newGame in
-                score game `shouldBe` [(Black, 2), (White, 353)]
+                score game `shouldBe` Map.fromList [(Black, 2), (White, 353)]
 
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game

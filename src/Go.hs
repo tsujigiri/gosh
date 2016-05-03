@@ -21,18 +21,19 @@ import Control.Monad.List
 import Data.Maybe
 
 data Point = Point (Int, Int) deriving (Show, Ord, Eq)
-data Stone = Empty | Black | White | Ko deriving Eq
+data Stone = Empty | Black | White | Ko deriving (Eq, Ord)
 type Board = Map.Map Point Stone
 data Game = Game {
     board :: Board,
     moves :: [Maybe Point],
     size :: Int,
-    dead :: [Point]
+    dead :: [Point],
+    captured :: [(Stone, Int)]
 } deriving Eq
 
 data SegmentAndAdjacent = SegmentAndAdjacent {
     segment :: Board,
-    segmentType :: Stone
+    segmentTypes :: [Stone]
 } deriving Eq
 
 newGame :: Game
@@ -40,13 +41,14 @@ newGame = Game {
     board = Map.fromList [ ((Point (x, y)), Empty) | x <- [1..19], y <- [1..19] ],
     moves = [],
     size = 19,
-    dead = []
+    dead = [],
+    captured = []
 }
 
-newSegment :: Stone -> SegmentAndAdjacent
-newSegment segmentType = SegmentAndAdjacent {
+newSegment :: [Stone] -> SegmentAndAdjacent
+newSegment segmentTypes = SegmentAndAdjacent {
     segment = Map.empty,
-    segmentType = segmentType
+    segmentTypes = segmentTypes
     }
 
 addMove :: Point -> Game -> Either String Game
@@ -125,7 +127,7 @@ removeCaptured game point
     | nextStone game /= currentStone = game
     | length dead == 1 = game { board = Map.insert point Ko board }
     | otherwise = game { board = multiInsert dead Empty board }
-    where dead = deadGroup $ collectSegmentAt game (newSegment currentStone) point
+    where dead = deadGroup $ collectSegmentAt game (newSegment [currentStone]) point
           Just currentStone = boardAt game point
           Game { board = board, size = size } = game
           Point (x, y) = point
@@ -134,16 +136,15 @@ collectSegmentAt :: Game -> SegmentAndAdjacent -> Point -> SegmentAndAdjacent
 collectSegmentAt game segmentAndAdjacent point
     | isOffBoard point game = segmentAndAdjacent
     | Map.member point segment = segmentAndAdjacent
-    | currentStone == segmentType =
+    | currentStone `elem` segmentTypes =
         foldl (collectSegmentAt game) segmentAndAdjacent' [up, down, left, right]
     | otherwise = segmentAndAdjacent { segment = updateBoard point currentStone segment }
     where Game { size = size, dead = dead } = game
-          SegmentAndAdjacent { segment = segment, segmentType = segmentType } =
+          SegmentAndAdjacent { segment = segment, segmentTypes = segmentTypes } =
               segmentAndAdjacent
           Just currentStone = boardAt game point
           segmentAndAdjacent' = segmentAndAdjacent {
-              segment = updateBoard point currentStone segment,
-              segmentType = segmentType
+              segment = updateBoard point currentStone segment
               }
           Point (x, y) = point
           up = Point (x, y - 1)
@@ -152,11 +153,11 @@ collectSegmentAt game segmentAndAdjacent point
           right = Point (x + 1, y)
 
 deadGroup :: SegmentAndAdjacent -> [Point]
-deadGroup SegmentAndAdjacent { segment = segment, segmentType = segmentType }
+deadGroup SegmentAndAdjacent { segment = segment, segmentTypes = segmentTypes }
     | any (== Empty) (Map.elems segment) = []
     | otherwise = Map.foldMapWithKey collectEquals segment
-        where collectEquals k v = if v == segmentType then [k]
-                                                      else []
+        where collectEquals k v = if v `elem` segmentTypes then [k]
+                                                           else []
 
 multiInsert :: Ord k => [k] -> v -> Map.Map k v -> Map.Map k v
 multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks
@@ -182,17 +183,42 @@ isOffBoard point game = x < 1 || y < 1 || x > size || y > size
     where Point (x, y) = point
           Game { size = size } = game
 
-score :: Game -> [(Stone, Int)]
-score game = (flip evalState) [] $ runListT $ do
+score :: Game -> Map.Map Stone Int
+score game = mapFromListWith (+) $ territory  ++ (invert (captured gameWithoutDead))
+    where gameWithoutDead = removeDead game
+          territory = countTerritory gameWithoutDead
+          invert = map (\(stone, score) -> (opponent stone, score))
+
+mapFromListWith :: Ord a => (b -> b -> b) -> [(a, b)] -> Map.Map a b
+mapFromListWith f = foldl (\m (a, b) -> Map.insertWith f a b m) Map.empty
+
+countTerritory :: Game -> [(Stone, Int)]
+countTerritory game = (flip evalState) [] $ runListT $ do
     emptyPoint <- ListT . return $ emptyPoints $ board game
     visitedPoints <- lift get
     guard $ emptyPoint `notElem` visitedPoints
-    let currentSegment = collectSegmentAt game (newSegment Empty) emptyPoint
+    let currentSegment = collectSegmentAt game (newSegment [Empty]) emptyPoint
     lift $ modify (emptyPoints (segment currentSegment) ++)
     let maybeOccupier = occupier currentSegment (dead game)
     guard $ maybeOccupier /= Nothing
     let Just occupier = maybeOccupier
-    return $ (occupier, count currentSegment occupier)
+    return (occupier, countSegmentTerritory currentSegment)
+
+removeDead :: Game -> Game
+removeDead game | deadPoints == [] = game
+                | otherwise = game { board = newBoard, captured = captures }
+    where newBoard = massMapInsert deadPoints Empty (board game)
+          Just deadStone = boardAt game (head deadPoints)
+          deadCount = length deadPoints
+          captures = (deadStone, deadCount):(captured game)
+          deadPoints = do
+            point <- (dead game)
+            let Just segmentType = boardAt game point
+            let currentSegment = collectSegmentAt game (newSegment [segmentType, Empty]) point
+            Map.keys $ Map.filter (== segmentType) (segment currentSegment)
+
+massMapInsert :: Ord k => [k] -> a -> Map.Map k a -> Map.Map k a
+massMapInsert ks a m = foldl (\m k -> Map.insert k a m) m ks
 
 occupier :: SegmentAndAdjacent -> [Point] -> Maybe Stone
 occupier s dead = if Black `elem` stones && (White `notElem` stones || whiteIsDead) then
@@ -207,10 +233,8 @@ occupier s dead = if Black `elem` stones && (White `notElem` stones || whiteIsDe
           whiteIsDead = not . null $ occupiedBy White `intersect` dead
           blackIsDead = not . null $ occupiedBy Black `intersect` dead
 
-count :: SegmentAndAdjacent -> Stone -> Int
-count currentSegment occupier = territory + captured * 2
-    where captured = length . Map.keys $ Map.filter (== (opponent occupier)) (segment currentSegment)
-          territory = length . Map.keys $ Map.filter (== Empty) (segment currentSegment)
+countSegmentTerritory :: SegmentAndAdjacent -> Int
+countSegmentTerritory currentSegment = length . Map.keys $ Map.filter (== Empty) (segment currentSegment)
 
 isInSegment :: SegmentAndAdjacent -> Point -> Bool
 isInSegment s p = (p `elem`) . Map.keys . segment $ s
