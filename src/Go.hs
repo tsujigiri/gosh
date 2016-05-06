@@ -125,12 +125,23 @@ removeCaptured :: Game -> Point -> Game
 removeCaptured game point
     | isOffBoard point game = game
     | nextStone game /= currentStone = game
-    | length dead == 1 = game { board = Map.insert point Ko board }
-    | otherwise = game { board = multiInsert dead Empty board }
+    | length dead == 1 = game { board = Map.insert point Ko board, captured = captures }
+    | otherwise = game { board = multiInsert dead Empty board, captured = captures }
     where dead = deadGroup $ collectSegmentAt game (newSegment [currentStone]) point
           Just currentStone = boardAt game point
-          Game { board = board, size = size } = game
+          Game { board = board, size = size, captured = captured } = game
           Point (x, y) = point
+          captures = if length dead > 0 then
+                        (currentStone, length dead):captured
+                     else
+                        captured
+
+deadGroup :: SegmentAndAdjacent -> [Point]
+deadGroup SegmentAndAdjacent { segment = segment, segmentTypes = segmentTypes }
+    | any (== Empty) (Map.elems segment) = []
+    | otherwise = Map.foldMapWithKey collectEquals segment
+        where collectEquals k v = if v `elem` segmentTypes then [k]
+                                                           else []
 
 collectSegmentAt :: Game -> SegmentAndAdjacent -> Point -> SegmentAndAdjacent
 collectSegmentAt game segmentAndAdjacent point
@@ -151,13 +162,6 @@ collectSegmentAt game segmentAndAdjacent point
           down = Point (x, y + 1)
           left = Point (x - 1, y)
           right = Point (x + 1, y)
-
-deadGroup :: SegmentAndAdjacent -> [Point]
-deadGroup SegmentAndAdjacent { segment = segment, segmentTypes = segmentTypes }
-    | any (== Empty) (Map.elems segment) = []
-    | otherwise = Map.foldMapWithKey collectEquals segment
-        where collectEquals k v = if v `elem` segmentTypes then [k]
-                                                           else []
 
 multiInsert :: Ord k => [k] -> v -> Map.Map k v -> Map.Map k v
 multiInsert ks v m = foldl (\m' k -> Map.insert k v m') m ks

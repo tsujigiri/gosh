@@ -83,6 +83,16 @@ main = hspec $ do
                 game = markDead (Point (10, 10)) . addMoves moves $ newGame in
                 score game `shouldBe` Map.fromList [(Black, 2), (White, 353)]
 
+        it "takes single captures made during the game into account" $ do
+            let moves = ["d4", "e4", "pass", "d5", "pass", "c4", "pass", "d3", "pass"]
+                game = addMoves moves newGame in
+                score game `shouldBe` Map.fromList [(White, 358)]
+
+        it "takes group captures made during the game into account" $ do
+            let moves = ["a1", "a2", "b1", "b2", "c1", "c2", "d2", "d1"]
+                game = addMoves moves newGame in
+                score game `shouldBe` Map.fromList [(White, 6)]
+
 addMoves :: [String] -> Game -> Game
 addMoves [] game = game
 addMoves ("pass":moves) game = addMoves moves game'
